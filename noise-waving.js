@@ -13,7 +13,7 @@ class BandNoiseProcessor extends AudioWorkletProcessor {
         this.sampleRate = sampleRate;
 
         // Current center frequency
-        this.center = 400;
+        this.center = 300;
 
         // Width of the noise band
         this.bandwidth = 200;
