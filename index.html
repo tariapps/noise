@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noise Range Generator</title>
+
+<style>
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #111;
+	color: #eee;
+	font-family: system-ui, sans-serif;
+}
+
+.container {
+	width: min(500px, 92vw);
+	padding: 30px;
+	background: #1d1d1d;
+	border-radius: 16px;
+	box-shadow: 0 10px 40px #0008;
+}
+
+h1 {
+	margin-top: 0;
+	font-size: 24px;
+}
+
+.status {
+	margin: 20px 0;
+	padding: 12px;
+	border-radius: 8px;
+	background: #292929;
+	text-align: center;
+}
+
+.status.playing {
+	color: #7cff9b;
+}
+
+button {
+	width: 100%;
+	padding: 14px;
+	border: 0;
+	border-radius: 8px;
+	background: #eee;
+	color: #111;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+button:hover {
+	background: #fff;
+}
+
+button.stop {
+	background: #c94b4b;
+	color: white;
+}
+
+.control {
+	margin-top: 25px;
+}
+
+label {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+input[type="range"] {
+	width: 100%;
+}
+
+.info {
+	margin-top: 25px;
+	color: #999;
+	font-size: 13px;
+	line-height: 1.5;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+	<h1>Noise Range Generator</h1>
+
+	<div id="status" class="status">
+		Stopped
+	</div>
+
+	<button id="toggle">
+		Start Noise
+	</button>
+
+	<div class="control">
+		<label>
+			<span>Volume</span>
+			<span id="volumeValue">20%</span>
+		</label>
+
+		<input
+			id="volume"
+			type="range"
+			min="0"
+			max="100"
+			value="20"
+		>
+	</div>
+
+	<div class="info">
+		Generates random noise continuously in specific range.
+		frequency range using the Web Audio API.
+		Audio is generated in real time rather than stored in memory.
+	</div>
+
+</div>
+
+<script>
+let audioContext = null;
+let workletNode = null;
+let gainNode = null;
+let playing = false;
+
+
+// ---------------------------------------------------------
+// Start audio
+// ---------------------------------------------------------
+
+async function startNoise() {
+    if (!audioContext) {
+        audioContext = new AudioContext();
+		
+		await audioContext.audioWorklet.addModule("noise-processor.js");
+		
+		workletNode = new AudioWorkletNode(
+			audioContext,
+			"band-noise-processor"
+		);
+
+		gainNode = audioContext.createGain();
+		gainNode.gain.value = 0.2;
+
+		workletNode.connect(gainNode);
+		gainNode.connect(audioContext.destination);
+    }
+
+    await audioContext.resume();
+
+    playing = true;
+
+    document.getElementById("toggle").textContent = "Stop Noise";
+    document.getElementById("toggle").classList.add("stop");
+    document.getElementById("status").textContent = "Playing continuously";
+    document.getElementById("status").classList.add("playing");
+}
+
+
+// ---------------------------------------------------------
+// Stop audio
+// ---------------------------------------------------------
+
+async function stopNoise() {
+    if (!audioContext) return;
+
+    await audioContext.suspend();
+
+    playing = false;
+
+    document.getElementById("toggle").textContent = "Start Noise";
+    document.getElementById("toggle").classList.remove("stop");
+    document.getElementById("status").textContent = "Stopped";
+    document.getElementById("status").classList.remove("playing");
+}
+
+
+// ---------------------------------------------------------
+// Start / Stop button
+// ---------------------------------------------------------
+
+document.getElementById("toggle").addEventListener("click", async () => {
+	if (playing) {
+		await stopNoise();
+	} else {
+		await startNoise();
+	}
+});
+
+
+// ---------------------------------------------------------
+// Volume
+// ---------------------------------------------------------
+
+document.getElementById("volume").addEventListener("input", event => {
+	const value = Number(event.target.value);
+
+	document.getElementById("volumeValue").textContent =
+		value + "%";
+
+	if (gainNode) {
+		gainNode.gain.value = value / 100;
+	}
+});
+
+</script>
+
+</body>
+</html>
+
